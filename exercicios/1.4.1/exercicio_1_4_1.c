@@ -21,24 +21,29 @@ int main(int argc, char* args[])
     int nP = 0;
     SDL_Event evt;
 
-    while (1) {
+    int inGame = 1;
+
+    while (inGame) {
         SDL_SetRenderDrawColor(ren, 0x00, 0x00, 0x00, 0x00);
         SDL_RenderClear(ren);
         SDL_SetRenderDrawColor(ren, 0xFF, 0xFF, 0xFF, 0x00);
         SDL_RenderFillRect(ren, &r);
 
         /* Draw points */
-        SDL_SetRenderDrawColor(ren, 0xFF, 0x00, 0xFF, 0x00);
+        
         for (int i = 0; i < nP; i++)
         {
+            SDL_SetRenderDrawColor(ren, 0xFF, 0xFF / (i + 1), 0x10 * i, 0x00);
             SDL_RenderFillRect(ren, &points[i]);
         }
 
         SDL_RenderPresent(ren);
 
         SDL_WaitEvent(&evt);
-        if (evt.type == SDL_KEYDOWN) {
-            switch (evt.key.keysym.sym) {
+
+        switch (evt.type) {
+            case SDL_KEYDOWN:
+                switch (evt.key.keysym.sym) {
                 case SDLK_UP:
                     r.y -= r.y <= 0 ? 0 : 5;
                     break;
@@ -51,25 +56,20 @@ int main(int argc, char* args[])
                 case SDLK_RIGHT:
                     r.x += r.x >= WINDOW_WIDTH - RECT_SIZE ? 0 : 5;
                     break;
-            }
-        }
-        if (evt.type == SDL_MOUSEBUTTONDOWN) {
-            if (nP < 10) {
-                int x, y;
-                SDL_GetMouseState(&x, &y);
-                SDL_Rect newR = { x,y , RECT_SIZE, RECT_SIZE };
-                points[nP] = newR;
-                nP += 1;
-            }
-        }
-        if (evt.type == SDL_WINDOWEVENT) {
-            switch (evt.window.event) {
-                case SDL_WINDOWEVENT_CLOSE:   // exit game
-                    SDL_DestroyRenderer(ren);
-                    SDL_DestroyWindow(win);
-                    SDL_Quit();
-                    break;
-            }
+                }
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                if (nP < 10) {
+                    int x, y;
+                    SDL_GetMouseState(&x, &y);
+                    SDL_Rect newR = { x,y , RECT_SIZE, RECT_SIZE };
+                    points[nP] = newR;
+                    nP += 1;
+                }
+                break;
+            case SDL_WINDOWEVENT:
+                inGame = evt.window.event == SDL_WINDOWEVENT_CLOSE ? 0 : 1;
+                break;
         }
     }
 
