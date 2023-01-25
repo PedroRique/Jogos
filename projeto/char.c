@@ -57,6 +57,8 @@ int main(int argc, char* args[]) {
     TTF_Font* font = TTF_OpenFont("AGENTORANGE.ttf", 25);
 
     SDL_Texture* cellBg = IMG_LoadTexture(ren, "cell.bmp");
+    SDL_Texture* cellActiveBg = IMG_LoadTexture(ren, "cell-active.bmp");
+    SDL_Texture* holeBg = IMG_LoadTexture(ren, "hole.bmp");
 
     SDL_Color white = { 255, 255, 255 };
     SDL_Color green = { 0, 255, 0 };
@@ -120,9 +122,9 @@ int main(int argc, char* args[]) {
         }
         else if(screen == Game) {
             struct SDL_Rect cells[50];
-            SDL_Rect f = { 20, 230, 20, 20 };
+            SDL_Rect f = { 20, 200, 40, 40 };
             SDL_Rect floor = { 0, 250, 600, 50 };
-            SDL_Rect door = { 500, 230, 20, 20 };
+            SDL_Rect hole = { 500, 230, 20, 20 };
             cells[0] = f;
             int nCells = 1;
             int maxCells = 4;
@@ -134,18 +136,24 @@ int main(int argc, char* args[]) {
 
                 for (int i = 0; i < nCells; i++)
                 {
+                    SDL_Rect c = cells[i];
                     if (i == focusedCell) {
-                        SDL_SetRenderDrawColor(ren, 12, 233, 233, 255);
+                        SDL_RenderCopy(ren, cellActiveBg, NULL, &c);
                     }
                     else {
-                        SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
+                        SDL_RenderCopy(ren, cellBg, NULL, &c);
                     }
-                    SDL_Rect c = cells[i];
-                    SDL_RenderCopy(ren, cellBg, NULL, &c);
 
-                    SDL_bool d = SDL_HasIntersection(&c, &door);
+                    SDL_Rect result;
+                    SDL_bool intersected = SDL_IntersectRect(&c, &hole, &result);
 
-                    if (d == SDL_TRUE) {
+                    if (
+                        intersected == SDL_TRUE &&
+                        result.w == c.w - 2 &&
+                        result.h == c.h - 2 &&
+                        hole.w == c.w &&
+                        hole.h == c.h
+                    ) {
                         for (int j = i; j <= nCells - 1; j++) {
                             cells[j] = cells[j + 1];
                         }
@@ -153,14 +161,14 @@ int main(int argc, char* args[]) {
                             focusedCell = 0;
                         }
                         nCells--;
+                        
                     }
                 }
 
                 SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
                 SDL_RenderFillRect(ren, &floor);
 
-                SDL_SetRenderDrawColor(ren, 123, 123, 32, 255);
-                SDL_RenderFillRect(ren, &door);
+                SDL_RenderCopy(ren, holeBg, NULL, &hole);
 
                 int hadEvent = AUX_WaitEventTimeoutCount(&evt, &timeout);
 
@@ -260,11 +268,15 @@ int main(int argc, char* args[]) {
     }
 
     /* FINALIZACAO */
-
+    SDL_DestroyTexture(holeBg);
+    SDL_DestroyTexture(cellActiveBg);
+    SDL_DestroyTexture(cellBg);
     TTF_CloseFont(font);
     TTF_CloseFont(titleFont);
     SDL_DestroyRenderer(ren);
     SDL_DestroyWindow(win);
+    IMG_Quit();
+    TTF_Quit();
     SDL_Quit();
 
     return 0;
