@@ -9,6 +9,15 @@
 
 enum ScreenState { Menu, Game, Credits };
 
+enum VirusState { Alive, Dying, Dead };
+
+enum LevelState { Play, Pause, GameOver };
+
+typedef struct {
+    SDL_Rect data;
+    enum VirusState state;
+} Virus;
+
 typedef struct Level
 {
     SDL_Rect initCell;
@@ -84,6 +93,7 @@ int main(int argc, char* args[]) {
     SDL_Texture* cellActiveBg = IMG_LoadTexture(ren, "cell-active.bmp");
     SDL_Texture* holeBg = IMG_LoadTexture(ren, "hole.bmp");
     SDL_Texture* patternBg = IMG_LoadTexture(ren, "pattern.bmp");
+    SDL_Texture* virusBg = IMG_LoadTexture(ren, "virus.bmp");
 
     SDL_Color white = { 255, 255, 255 };
     SDL_Color green = { 0, 255, 0 };
@@ -98,6 +108,8 @@ int main(int argc, char* args[]) {
 
     while (inGame) {
         SDL_SetRenderDrawColor(ren, 0, 0, 0, 0);
+        SDL_RenderClear(ren);
+        renderBackground(ren);
 
         if (screen == Menu) {
             char* menu[] = { "Start", "Credits" };
@@ -147,14 +159,20 @@ int main(int argc, char* args[]) {
         }
         else if(screen == Game) {
 
-            struct SDL_Rect cells[50];
+            enum LevelState levelState = Play;
+
+            struct SDL_Rect cells[] = { { 10, 200, 40, 40 } };
             struct SDL_Rect obs[] = { { 0, 250, 600, 50 } , { 100, 0, 400, 229 } };
 
-            SDL_Rect f = { 20, 200, 40, 40 };
             SDL_Rect hole = { 540, 200, 40, 40 };
 
-            cells[0] = f;
-            int nCells = 1;
+            
+            Virus virus;
+            SDL_Rect vrect = { 60, 200, 40 , 40 };
+            virus.data = vrect;
+            virus.state = Alive;
+
+            int nCells = LENGTH(cells);
 
             int maxCells = 4;
             int focusedCell = 0;
@@ -191,13 +209,60 @@ int main(int argc, char* args[]) {
                         if (i == nCells - 1) {
                             focusedCell = 0;
                         }
-                        nCells--;   
+                        nCells--;
+                        if (nCells == 0) {
+                            screen = Credits;
+                            break;
+                        }
                     }
+
+                    SDL_bool intersectedVirus = SDL_IntersectRect(&c, &virus.data, &result);
+
+                    if (intersectedVirus && virus.state == Alive) {
+                        if (c.w >= virus.data.w) {
+                            //kill virus
+                            virus.state = Dying;
+                        }
+                        else {
+                            //kill cell
+                            for (int j = i; j <= nCells - 1; j++) {
+                                cells[j] = cells[j + 1];
+                            }
+                            if (i == nCells - 1) {
+                                focusedCell = 0;
+                            }
+                            nCells--;
+                            if (nCells == 0) {
+                                levelState = GameOver;
+                                break;
+                            }
+                        }
+                    }
+                }                
+
+                if (virus.state == Alive || virus.state == Dying) {
+                    SDL_RenderCopy(ren, virusBg, NULL, &virus);
                 }
+                
 
                 for (int i = 0; i < LENGTH(obs); i++)
                 {
                     SDL_RenderCopy(ren, patternBg, NULL, &obs[i]);
+                }
+
+                if (levelState == Pause || levelState == GameOver) {
+                    SDL_Rect overlay = { 0,0,600,300 };
+                    SDL_SetRenderDrawBlendMode(ren, SDL_BLENDMODE_BLEND);
+                    SDL_SetRenderDrawColor(ren, 0, 0, 0, 120);
+                    SDL_RenderFillRect(ren, &overlay);
+                }
+
+                if (levelState == Pause) {
+                    renderText(ren, font, "Pause", white, 25, 300, 150);
+                }
+
+                if (levelState == GameOver) {
+                    renderText(ren, font, "Game Over", white, 25, 300, 150);
                 }
 
                 int hadEvent = AUX_WaitEventTimeoutCount(&evt, &timeout);
@@ -264,7 +329,15 @@ int main(int argc, char* args[]) {
                                 case SDLK_ESCAPE:
                                     screen = Menu;
                                     break;
-                            }
+                                case SDLK_SPACE:
+                                    if (levelState == Pause) {
+                                        levelState = Play;
+                                    }
+                                    else if (levelState == Play) {
+                                        levelState = Pause;
+                                    }
+                                    break;
+                            }   
                             break;
 
                         case SDL_WINDOWEVENT:
@@ -273,29 +346,42 @@ int main(int argc, char* args[]) {
                     }
                 }
                 else {
-                    Uint8* keys = SDL_GetKeyboardState(NULL);
+                    if (levelState == Play) {
+                        if (virus.state == Dying) {
+                            virus.data.x = virus.data.x + 1;
+                            virus.data.y = virus.data.y + 1;
+                            virus.data.w = virus.data.w - 2;
+                            virus.data.h = virus.data.h - 2;
 
-                    int step = 3;
+                            if (virus.data.w <= 0) {
+                                virus.state = Dead;
+                            }
+                        }
 
-                    SDL_Rect tryToMoveCell = cells[focusedCell];
+                        Uint8* keys = SDL_GetKeyboardState(NULL);
 
-                    if (keys[SDL_SCANCODE_LEFT]) {
-                        tryToMoveCell.x -= step;
-                    }
-                    if (keys[SDL_SCANCODE_RIGHT]) {
-                        tryToMoveCell.x += step;
-                    }
-                    if (keys[SDL_SCANCODE_UP]) {
-                        tryToMoveCell.y -= step;
-                    }
-                    if (keys[SDL_SCANCODE_DOWN]) {
-                        tryToMoveCell.y += step;
-                    }
+                        int step = 3;
 
-                    SDL_bool hadCollision = checkCollisionWithObs(tryToMoveCell, obs, LENGTH(obs));
+                        SDL_Rect tryToMoveCell = cells[focusedCell];
 
-                    if (!hadCollision) {
-                        cells[focusedCell] = tryToMoveCell;
+                        if (keys[SDL_SCANCODE_LEFT]) {
+                            tryToMoveCell.x -= step;
+                        }
+                        if (keys[SDL_SCANCODE_RIGHT]) {
+                            tryToMoveCell.x += step;
+                        }
+                        if (keys[SDL_SCANCODE_UP]) {
+                            tryToMoveCell.y -= step;
+                        }
+                        if (keys[SDL_SCANCODE_DOWN]) {
+                            tryToMoveCell.y += step;
+                        }
+
+                        SDL_bool hadCollision = checkCollisionWithObs(tryToMoveCell, obs, LENGTH(obs));
+
+                        if (!hadCollision) {
+                            cells[focusedCell] = tryToMoveCell;
+                        }
                     }
 
                     timeout = timeoutBase;
@@ -305,12 +391,11 @@ int main(int argc, char* args[]) {
             }
         }
         else if (screen == Credits) {
+            
             SDL_RenderClear(ren);
             renderBackground(ren);
 
             renderText(ren, font, "Credits", white, 25, 300, 100);
-
-            
             renderText(ren, font, "Pedro Rique", white, 15, 300, 200);
 
             int hadEvent = AUX_WaitEventTimeoutCount(&evt, &timeout);
