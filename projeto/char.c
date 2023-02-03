@@ -161,14 +161,17 @@ int main(int argc, char* args[]) {
 
             enum LevelState levelState = Play;
 
-            struct SDL_Rect cells[] = { { 10, 200, 40, 40 } };
-            struct SDL_Rect obs[] = { { 0, 250, 600, 50 } , { 100, 0, 400, 229 } };
+            //struct SDL_Rect cells[] = { { 10, 200, 40, 40 } };
+            //struct SDL_Rect obs[] = { { 0, 250, 600, 50 } , { 100, 0, 400, 229 } };
+            struct SDL_Rect cells[] = { { 30, 200, 20, 20 }, { 30, 140, 20, 20 } };
+            struct SDL_Rect obs[] = { { 30, 160, 400, 20 } , { 420, 160, 20, 60 }, { 0, 220, 600, 80 } };
 
-            SDL_Rect hole = { 540, 200, 40, 40 };
+            //SDL_Rect hole = { 540, 200, 40, 40 };
+            SDL_Rect hole = { 540, 160, 40, 40 };
 
-            
             Virus virus;
-            SDL_Rect vrect = { 60, 200, 40 , 40 };
+            //SDL_Rect vrect = { 60, 200, 40 , 40 };
+            SDL_Rect vrect = { 160, 120, 40 , 40 };
             virus.data = vrect;
             virus.state = Alive;
 
