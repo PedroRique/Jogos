@@ -65,8 +65,37 @@ SDL_bool checkCollisionWithObs(SDL_Rect rect, struct SDL_Rect obs[], int nObs) {
 
     for (int i = 0; i < nObs; i++)
     {
+        SDL_Rect result;
         SDL_bool had = SDL_HasIntersection(&rect, &obs[i]);
+        SDL_bool had2 = SDL_IntersectRect(&rect, &obs[i], &result);
+
+        if (i == 0) {
+            printf("colisao %d %d %d %d %d\n", had2, result.x, result.y, result.w, result.h);
+        }
+        
         hadCollision = had || hadCollision;
+        if (hadCollision) {
+            break;
+        }
+    }
+
+    return hadCollision;
+}
+
+SDL_bool checkCollisionWithObsVertical(SDL_Rect rect, struct SDL_Rect obs[], int nObs) {
+    SDL_bool hadCollision = SDL_FALSE;
+
+    for (int i = 0; i < nObs; i++)
+    {
+        SDL_Rect result;
+        SDL_bool had = SDL_HasIntersection(&rect, &obs[i]);
+        SDL_bool had2 = SDL_IntersectRect(&rect, &obs[i], &result);
+
+        if (i == 0) {
+            printf("colisao %d %d %d %d %d\n", had2, result.x, result.y, result.w, result.h);
+        }
+
+        hadCollision = (had || hadCollision) && result.h > 0;
         if (hadCollision) {
             break;
         }
@@ -163,22 +192,32 @@ int main(int argc, char* args[]) {
 
             //struct SDL_Rect cells[] = { { 10, 200, 40, 40 } };
             //struct SDL_Rect obs[] = { { 0, 250, 600, 50 } , { 100, 0, 400, 229 } };
-            struct SDL_Rect cells[] = { { 30, 200, 20, 20 }, { 30, 140, 20, 20 } };
-            struct SDL_Rect obs[] = { { 30, 160, 400, 20 } , { 420, 160, 20, 60 }, { 0, 220, 600, 80 } };
+            //struct SDL_Rect cells[] = { { 30, 200, 20, 20 }, { 30, 140, 20, 20 } };
+            //struct SDL_Rect obs[] = { {60, 200, 20, 20}, { 30, 160, 400, 20 } , { 420, 160, 20, 60 }, { 0, 220, 600, 80 } };
+            
+            struct SDL_Rect cells[] = { { 80, 100, 20, 20 }, { 120, 100, 20, 20 } };
+            struct SDL_Rect obs[] = { {60, 200, 300, 100}, {200, 130, 20, 70} };
+
 
             //SDL_Rect hole = { 540, 200, 40, 40 };
-            SDL_Rect hole = { 540, 160, 40, 40 };
+            //SDL_Rect hole = { 540, 160, 40, 40 };
+            SDL_Rect hole = { 280, 160, 40, 40 };
 
             Virus virus;
             //SDL_Rect vrect = { 60, 200, 40 , 40 };
             SDL_Rect vrect = { 160, 120, 40 , 40 };
             virus.data = vrect;
-            virus.state = Alive;
+            //virus.state = Dead;
+            //virus.state = Alive;
+            virus.state = Dead;
 
             int nCells = LENGTH(cells);
 
             int maxCells = 4;
             int focusedCell = 0;
+
+            int gravity = 1;
+            int onGround = 0;
 
             while (screen == Game) {
                 SDL_RenderClear(ren);
@@ -373,17 +412,38 @@ int main(int argc, char* args[]) {
                         if (keys[SDL_SCANCODE_RIGHT]) {
                             tryToMoveCell.x += step;
                         }
-                        if (keys[SDL_SCANCODE_UP]) {
-                            tryToMoveCell.y -= step;
+                        
+
+                        
+
+                        SDL_bool hadCollision = checkCollisionWithObs(tryToMoveCell, obs, LENGTH(obs));
+                        
+
+                        if (!hadCollision) {
+                            cells[focusedCell] = tryToMoveCell;
+                        }
+
+                        tryToMoveCell = cells[focusedCell];
+
+                        if (gravity) {
+                            tryToMoveCell.y += step;
+                        }
+
+                        if (keys[SDL_SCANCODE_UP] && onGround) {
+                            tryToMoveCell.y -= tryToMoveCell.h * 2;
                         }
                         if (keys[SDL_SCANCODE_DOWN]) {
                             tryToMoveCell.y += step;
                         }
 
-                        SDL_bool hadCollision = checkCollisionWithObs(tryToMoveCell, obs, LENGTH(obs));
+                        SDL_bool hadCollisionV = checkCollisionWithObsVertical(tryToMoveCell, obs, LENGTH(obs));
 
-                        if (!hadCollision) {
+                        if (!hadCollisionV) {
+                            onGround = 0;
                             cells[focusedCell] = tryToMoveCell;
+                        }
+                        else {
+                            onGround = 1;
                         }
                     }
 
