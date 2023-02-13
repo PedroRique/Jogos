@@ -68,10 +68,6 @@ SDL_bool checkCollisionWithObs(SDL_Rect rect, struct SDL_Rect obs[], int nObs) {
         SDL_Rect result;
         SDL_bool had = SDL_HasIntersection(&rect, &obs[i]);
         SDL_bool had2 = SDL_IntersectRect(&rect, &obs[i], &result);
-
-        if (i == 0) {
-            printf("colisao %d %d %d %d %d\n", had2, result.x, result.y, result.w, result.h);
-        }
         
         hadCollision = had || hadCollision;
         if (hadCollision) {
@@ -90,10 +86,6 @@ SDL_bool checkCollisionWithObsVertical(SDL_Rect rect, struct SDL_Rect obs[], int
         SDL_Rect result;
         SDL_bool had = SDL_HasIntersection(&rect, &obs[i]);
         SDL_bool had2 = SDL_IntersectRect(&rect, &obs[i], &result);
-
-        if (i == 0) {
-            printf("colisao %d %d %d %d %d\n", had2, result.x, result.y, result.w, result.h);
-        }
 
         hadCollision = (had || hadCollision) && result.h > 0;
         if (hadCollision) {
@@ -190,26 +182,38 @@ int main(int argc, char* args[]) {
 
             enum LevelState levelState = Play;
 
+            Virus virus;
+
+            //level1
             //struct SDL_Rect cells[] = { { 10, 200, 40, 40 } };
             //struct SDL_Rect obs[] = { { 0, 250, 600, 50 } , { 100, 0, 400, 229 } };
+            //SDL_Rect hole = { 540, 200, 40, 40 };
+            //SDL_Rect vrect = { 0, 0, 0 , 0 };
+            //virus.state = Dead;
+            
+            //level2
             //struct SDL_Rect cells[] = { { 30, 200, 20, 20 }, { 30, 140, 20, 20 } };
             //struct SDL_Rect obs[] = { {60, 200, 20, 20}, { 30, 160, 400, 20 } , { 420, 160, 20, 60 }, { 0, 220, 600, 80 } };
-            
-            struct SDL_Rect cells[] = { { 80, 100, 20, 20 }, { 120, 100, 20, 20 } };
-            struct SDL_Rect obs[] = { {60, 200, 300, 100}, {200, 130, 20, 70} };
-
-
-            //SDL_Rect hole = { 540, 200, 40, 40 };
             //SDL_Rect hole = { 540, 160, 40, 40 };
-            SDL_Rect hole = { 280, 160, 40, 40 };
-
-            Virus virus;
             //SDL_Rect vrect = { 60, 200, 40 , 40 };
-            SDL_Rect vrect = { 160, 120, 40 , 40 };
-            virus.data = vrect;
-            //virus.state = Dead;
             //virus.state = Alive;
+
+            //level3
+            //struct SDL_Rect cells[] = { { 80, 100, 20, 20 }, { 120, 100, 20, 20 } };
+            //struct SDL_Rect obs[] = { {60, 200, 300, 100}, {200, 130, 20, 70} };
+            //SDL_Rect hole = { 280, 160, 40, 40 };
+            //SDL_Rect vrect = { 0, 0, 0 , 0 };
+            //virus.state = Dead;
+            
+            //level4
+            struct SDL_Rect cells[] = { { 80, 180, 20, 20 }, { 420, 180, 20, 20 } };
+            struct SDL_Rect obs[] = { {0, 200, 270, 100}, {330, 200, 270, 100} };
+            SDL_Rect hole = { 280, 260, 40, 40 };
+            SDL_Rect vrect = { 0, 0, 0 , 0 };
             virus.state = Dead;
+
+
+            virus.data = vrect;
 
             int nCells = LENGTH(cells);
 
@@ -217,7 +221,6 @@ int main(int argc, char* args[]) {
             int focusedCell = 0;
 
             int gravity = 1;
-            int onGround = 0;
 
             while (screen == Game) {
                 SDL_RenderClear(ren);
@@ -313,6 +316,11 @@ int main(int argc, char* args[]) {
                     switch (evt.type) {
                         case SDL_KEYDOWN:
                             switch (evt.key.keysym.sym) {
+                                case SDLK_UP:
+                                    if (SDL_TRUE) {
+                                        cells[focusedCell].y -= cells[focusedCell].h * 2;
+                                    }
+                                    break;
                                 case SDLK_c:
                                     if (nCells < maxCells) {
                                         SDL_Rect focused = cells[focusedCell];
@@ -414,8 +422,6 @@ int main(int argc, char* args[]) {
                         }
                         
 
-                        
-
                         SDL_bool hadCollision = checkCollisionWithObs(tryToMoveCell, obs, LENGTH(obs));
                         
 
@@ -423,27 +429,19 @@ int main(int argc, char* args[]) {
                             cells[focusedCell] = tryToMoveCell;
                         }
 
-                        tryToMoveCell = cells[focusedCell];
+                        for (int i = 0; i < LENGTH(cells); i++)
+                        {
+                            tryToMoveCell = cells[i];
 
-                        if (gravity) {
-                            tryToMoveCell.y += step;
-                        }
+                            if (gravity) {
+                                tryToMoveCell.y += step;
+                            }
 
-                        if (keys[SDL_SCANCODE_UP] && onGround) {
-                            tryToMoveCell.y -= tryToMoveCell.h * 2;
-                        }
-                        if (keys[SDL_SCANCODE_DOWN]) {
-                            tryToMoveCell.y += step;
-                        }
+                            SDL_bool hadCollisionV = checkCollisionWithObsVertical(tryToMoveCell, obs, LENGTH(obs));
 
-                        SDL_bool hadCollisionV = checkCollisionWithObsVertical(tryToMoveCell, obs, LENGTH(obs));
-
-                        if (!hadCollisionV) {
-                            onGround = 0;
-                            cells[focusedCell] = tryToMoveCell;
-                        }
-                        else {
-                            onGround = 1;
+                            if (!hadCollisionV) {
+                                cells[i] = tryToMoveCell;
+                            }
                         }
                     }
 
