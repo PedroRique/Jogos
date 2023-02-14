@@ -185,17 +185,17 @@ int main(int argc, char* args[]) {
             Virus virus;
 
             //level1
-            //struct SDL_Rect cells[] = { { 10, 200, 40, 40 } };
-            //struct SDL_Rect obs[] = { { 0, 250, 600, 50 } , { 100, 0, 400, 229 } };
-            //SDL_Rect hole = { 540, 200, 40, 40 };
-            //SDL_Rect vrect = { 0, 0, 0 , 0 };
-            //virus.state = Dead;
+            struct SDL_Rect cells[] = { { 10, 200, 40, 40 } };
+            struct SDL_Rect obs[] = { { 0, 250, 600, 50 } , { 100, 0, 400, 229 } };
+            SDL_Rect hole = { 540, 200, 40, 40 };
+            SDL_Rect vrect = { 0, 0, 0 , 0 };
+            virus.state = Dead;
             
             //level2
-            //struct SDL_Rect cells[] = { { 30, 200, 20, 20 }, { 30, 140, 20, 20 } };
-            //struct SDL_Rect obs[] = { {60, 200, 20, 20}, { 30, 160, 400, 20 } , { 420, 160, 20, 60 }, { 0, 220, 600, 80 } };
+            //struct SDL_Rect cells[] = { { 30, 200, 20, 20 }, { 50, 140, 20, 20 } };
+            //struct SDL_Rect obs[] = { { 50, 160, 400, 20 } , { 430, 160, 20, 60 }, { 0, 220, 450, 80 } };
             //SDL_Rect hole = { 540, 160, 40, 40 };
-            //SDL_Rect vrect = { 60, 200, 40 , 40 };
+            //SDL_Rect vrect = { 200, 120, 40 , 40 };
             //virus.state = Alive;
 
             //level3
@@ -206,11 +206,11 @@ int main(int argc, char* args[]) {
             //virus.state = Dead;
             
             //level4
-            struct SDL_Rect cells[] = { { 80, 180, 20, 20 }, { 420, 180, 20, 20 } };
-            struct SDL_Rect obs[] = { {0, 200, 270, 100}, {330, 200, 270, 100} };
-            SDL_Rect hole = { 280, 260, 40, 40 };
-            SDL_Rect vrect = { 0, 0, 0 , 0 };
-            virus.state = Dead;
+            //struct SDL_Rect cells[] = { { 80, 180, 20, 20 }, { 420, 180, 20, 20 } };
+            //struct SDL_Rect obs[] = { {0, 200, 240, 100}, {360, 200, 240, 100} };
+            //SDL_Rect hole = { 280, 260, 40, 40 };
+            //SDL_Rect vrect = { 0, 0, 0 , 0 };
+            //virus.state = Dead;
 
 
             virus.data = vrect;
@@ -221,8 +221,11 @@ int main(int argc, char* args[]) {
             int focusedCell = 0;
 
             int gravity = 1;
+            int standing = 1;
+            int jumpingStamina = 0;
+            int restart = 1;
 
-            while (screen == Game) {
+            while (screen == Game && restart) {
                 SDL_RenderClear(ren);
                 renderBackground(ren);
 
@@ -308,6 +311,7 @@ int main(int argc, char* args[]) {
 
                 if (levelState == GameOver) {
                     renderText(ren, font, "Game Over", white, 25, 300, 150);
+                    renderText(ren, font, "Press R to reload", white, 15, 300, 200);
                 }
 
                 int hadEvent = AUX_WaitEventTimeoutCount(&evt, &timeout);
@@ -317,8 +321,8 @@ int main(int argc, char* args[]) {
                         case SDL_KEYDOWN:
                             switch (evt.key.keysym.sym) {
                                 case SDLK_UP:
-                                    if (SDL_TRUE) {
-                                        cells[focusedCell].y -= cells[focusedCell].h * 2;
+                                    if (jumpingStamina <= 0 && standing) {
+                                        jumpingStamina = cells[focusedCell].h * 2;
                                     }
                                     break;
                                 case SDLK_c:
@@ -369,6 +373,7 @@ int main(int argc, char* args[]) {
                                     break;
 
                                 case SDLK_z:
+                                    jumpingStamina = 0;
                                     if (focusedCell == nCells - 1) {
                                         focusedCell = 0;
                                     }
@@ -385,6 +390,11 @@ int main(int argc, char* args[]) {
                                     }
                                     else if (levelState == Play) {
                                         levelState = Pause;
+                                    }
+                                    break;
+                                case SDLK_r:
+                                    if (levelState == GameOver) {
+                                        restart = 0;
                                     }
                                     break;
                             }   
@@ -429,9 +439,19 @@ int main(int argc, char* args[]) {
                             cells[focusedCell] = tryToMoveCell;
                         }
 
+                        if (jumpingStamina > 0) {
+                            jumpingStamina -= step;
+                            SDL_Rect temp = cells[focusedCell];
+                            temp.y -= step * 2;
+                            SDL_bool hadCollisionV = checkCollisionWithObsVertical(temp, obs, LENGTH(obs));
+                            if (!hadCollisionV) {
+                                cells[focusedCell] = temp;
+                            }
+                        }
+
                         for (int i = 0; i < LENGTH(cells); i++)
                         {
-                            tryToMoveCell = cells[i];
+                            SDL_Rect tryToMoveCell = cells[i];
 
                             if (gravity) {
                                 tryToMoveCell.y += step;
@@ -441,6 +461,28 @@ int main(int argc, char* args[]) {
 
                             if (!hadCollisionV) {
                                 cells[i] = tryToMoveCell;
+                            }
+
+                            if (i == focusedCell) {
+                                if (hadCollisionV) {
+                                    standing = 1;
+                                }
+                                else {
+                                    standing = 0;
+                                }
+                            }
+                        }
+
+                        if (cells[focusedCell].y > 300 || cells[focusedCell].x > 600) {
+                            for (int j = focusedCell; j <= nCells - 1; j++) {
+                                cells[j] = cells[j + 1];
+                            }
+                            if (focusedCell == nCells - 1) {
+                                focusedCell = 0;
+                            }
+                            nCells--;
+                            if (nCells == 0) {
+                                levelState = GameOver;
                             }
                         }
                     }
